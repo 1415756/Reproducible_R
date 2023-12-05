@@ -1,0 +1,288 @@
+---
+title: "reproducible_assessed_code"
+author: '141594'
+date: "2023-12-04"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+# Set the CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+#installing and loading packages:
+install.packages("ggplot2")
+install.packages("palmerpenguins")
+install.packages("janitor")
+install.packages("dplyr")
+install.packages("tinytex")
+install.packages('ragg')
+install.packages("svglite")
+# Load the packages:
+library(ggplot2)
+library(palmerpenguins)
+library(janitor)
+library(dplyr)
+library(tinytex)
+
+```
+*The following is a template .rmd RMarkdown file for you to use for your homework submission.*
+
+*Please Knit your .rmd to a PDF format or HTML and submit that with no identifiers like your name.*
+
+*To create a PDF, first install tinytex and load the package. Then press the Knit arrow and select "Knit to PDF".*
+
+## QUESTION 01: Data Visualisation for Science Communication
+
+*Create a figure using the Palmer Penguin dataset that is correct but badly communicates the data. **Do not make a boxplot**.*
+
+*Use the following references to guide you:*
+
+-   [*https://www.nature.com/articles/533452a*](https://www.nature.com/articles/533452a){.uri}
+-   [*https://elifesciences.org/articles/16800*](https://elifesciences.org/articles/16800){.uri}
+
+*Note: Focus on visual elements rather than writing misleading text on it.*
+
+
+```{r}
+head(penguins_raw)
+penguin_data<- penguins_raw
+
+```
+### a) Provide your figure here:
+```{r, echo=FALSE}
+data_summary <- as.data.frame(table(penguin_data$Species, penguin_data$Island))
+colnames(data_summary) <- c("Species", "Island", "Count")
+chart_colours <- c("#008000","#008090", "#660000","#b3ffb3","#ffe6e6","#e6ff56", "#e6ffe6","#ff1a1a","#ff1a1a","#ff1a1a" )
+
+ggplot(data_summary, aes(x = "", y = Count, fill = interaction(Species, Island))) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  theme_void() +
+  labs(title = "Number of Penguins in each species sampled across each of the islands", fill= "Key: Species and island") + scale_fill_manual(values=chart_colours)+ 
+  theme(plot.title = element_text(size = 12))  
+  
+
+
+```
+
+
+### b) Write about how your design choices mislead the reader about the underlying data (200-300 words).
+
+The graph is a pie chart which does not display data well, as humans struggle to interpret the proportions of the graph segments. 
+As a graph it lacks labels telling us the percentages each section holds. 
+The colours are not red-green colour blindness friendly. The colours are also lack logic as they do not correlate to either the island or the species of the penguin. 
+There are also no details on how many individuals are included in the data set, meaning it is misleading as you cannot identify accurately the proportion of penguin samples collected on each island, and how great the difference between the sample size of Gentoo penguins on Biscoe and other samples are. 
+The legend also includes colours that do not feature on the pie chart adding confusion. 
+May also be mislead by a lack of further sectioning whcih may aid analyses such as dividing sample into males and females. 
+
+*Include references.*
+
+------------------------------------------------------------------------
+
+## QUESTION 2: Data Pipeline
+
+*Write a data analysis pipeline in your .rmd RMarkdown file. You should be aiming to write a clear explanation of the steps as well as clear code.*
+
+*Your code should include the steps practiced in the lab session:*
+
+-   *Load the data*
+
+-   *Appropriately clean the data*
+
+-   *Create an Exploratory Figure (**not a boxplot**)*
+
+-   *Save the figure*
+
+-   ***New**: Run a statistical test*
+
+-   ***New**: Create a Results Figure*
+
+-   *Save the figure*
+
+*An exploratory figure shows raw data, such as the distribution of the data. A results figure demonstrates the stats method chosen, and includes the results of the stats test.*
+
+*Between your code, communicate clearly what you are doing and why.*
+
+*Your text should include:*
+
+-   *Introduction*
+
+-   *Hypothesis*
+
+-   *Stats Method*
+
+-   *Results*
+
+-   *Discussion*
+
+-   *Conclusion*
+
+*You will be marked on the following:*
+
+### a) Your code for readability and functionality
+
+### b) Your figures for communication
+
+### c) Your text communication of your analysis
+
+*Below is a template you can use.*
+
+------------------------------------------------------------------------
+
+### Introduction
+
+```{r Data Exploration}
+
+# Make sure your code prints. 
+# loading the data 
+library(palmerpenguins)
+# loading packages 
+
+library(svglite)
+
+library(ragg)
+library(ggplot2)
+library(palmerpenguins)
+library(janitor)
+library(dplyr)
+#load function definitions 
+source("functions/cleaning.r")
+source("functions/plotting.r")
+#saving the raw data 
+write.csv(penguins_raw, "data/penguins_raw.csv")
+
+# make names computer appropriate
+penguins_clean <- penguins_raw %>%
+    clean_column_names() %>%
+    shorten_species() %>%
+    remove_empty_columns_rows()
+
+names(penguins_clean)
+#saving cleaned data
+write.csv(penguins_clean, "data/penguins_clean.csv")
+
+```
+
+### Hypothesis
+Null hypotheses:  
+-H0 A: Means of all species are not significantly different to each other.   
+-H0 B: Slope of culmen length against flipper length is not different from 0 
+-H0 C: The effect of species does not depend on culmen length, meaning the slopes of the lines do not differ between species
+
+Alternative hypotheses:  
+- H1 A: At least one of the species means is significantly different from at least one other species mean.   
+- H1 B: That the slope of culmen length against flipper length is different from 0
+- H1 C: The effect of species does depend on culmen length, meaning the slopes of the lines differs between at least species. 
+
+### Statistical Methods
+
+```{r Statistics}
+# exploratory figure 
+
+# Filtering the data:
+beak_and_flipper_data <- penguins_clean %>%
+    subset_columns(c("species","culmen_length_mm", "culmen_depth_mm","flipper_length_mm")) %>%
+    remove_NA()
+
+head(beak_and_flipper_data)
+# exploratory figure 
+beak_flipper_bar_graph <- ggplot(beak_and_flipper_data, aes(x = culmen_length_mm, y = flipper_length_mm, color = species)) +
+  geom_point(size = 2, alpha = 0.4) + scale_color_manual(values = c("darkorange","purple","cyan4")) +
+  labs(title = "Scatterplot of Culmen Length vs Flipper Length", 
+       x = "Culmen Length (mm)", 
+       y = "Flipper Length (mm)",
+       color = "Species") +
+  theme_minimal() + theme(plot.title = element_text(size = 12))
+
+beak_flipper_bar_graph
+# this can also be formed using the function "plot_beak_flipper_figure" I have created 
+# saving the figure as png
+
+agg_png("figures/fig01_5x5.png", 
+        width = 5, height = 5, units = "cm", 
+        res = 600, scaling = 0.46)
+beak_flipper_bar_graph
+dev.off()
+     
+#running a statistical test 
+# fitting a linear model for an ANCOVA
+beak_flipper_model<- lm(flipper_length_mm ~ species * culmen_length_mm, beak_and_flipper_data)
+summary(beak_flipper_model)
+#adjusted R^2 = 0.8303. The adjusted R^2 value means the model explains 83.03% of the variation within our plotted points averaged across the species 
+anova(beak_flipper_model)
+```
+
+
+
+
+
+
+### Results & Discussion
+
+```{r Plotting Results}
+#plotting results 
+beak_flipper_results_graph <- ggplot(beak_and_flipper_data, aes(x = culmen_length_mm, y = flipper_length_mm, color = species)) +
+  geom_point(size = 2, alpha = 0.4) +
+   geom_smooth(method = "lm") +
+scale_color_manual(values = c("darkorange","purple","cyan4")) +
+  labs(title = "Scatterplot of Culmen Length vs Flipper Length", 
+       x = "Culmen Length (mm)", 
+       y = "Flipper Length (mm)",
+       color = "Species", caption ="Regression lines fitted") +theme(plot.margin = margin(b = 30), 
+        plot.caption = element_text(hjust = 0.5, size = 12)) +  # Adjust size here
+  theme_minimal() 
+
+  
+beak_flipper_results_graph 
+# Make sure your code prints. 
+
+```
+Figure showing analysis on culmen length vs flipper length. Lines fitted are Regression lines for each species. There is a significant difference in flipper length between different species as p value is 2e-16 and therefore <0.05, in the ANOVA table above. Significant effect of culmen length on flipper length p value is 2e-16 and therefore <0.05,meaning that as culmen length increases so does flipper length. Relationship between culmen length and flipper length does not differ between different species, as p value is > 0.05 at 0.0524. This suggests that the relationship between beak length and flipper length is similar across species which suggests they have a similar beak to flipper ratio, this might be expected if they inhabit the same niche.  
+The adjusted R^2 value, at 0.8303,  means the model explains 83.03% of the variation within our plotted points averaged across the species 
+
+
+
+### Conclusion
+There is a significant difference between means in flipper length and culmen length between species. Which is to be expected if species are different sizes, and in this sample they are significantly different. This means we can accept the alternative hypothesis, H1 A, because the species distributions are significantly different. 
+There is also a significant effect of culmen length on flipper length and as the slop of the lines is significantly different from 0, meaning we accept the alternative hypothesis, H1 B. This suggests that as clumen length increases flipper length will also increase in all three species. this is to be expected as larger birds are more likely to have larger beaks, therefore a larger culmen, and as they are larger have larger flipper length. 
+There is a non significant effect of species on the slope of the line, meaning we fail to reject the null hypothesis H0 C.
+This means the slopes of the lines do no differ between species, meanin an increase in culmen length of one species is likely to cause a similar increase in flipper length in other species. 
+------------------------------------------------------------------------
+
+## QUESTION 3: Open Science
+
+### a) GitHub
+
+*Upload your RProject you created for **Question 2** and any files and subfolders used to GitHub. Do not include any identifiers such as your name. Make sure your GitHub repo is public.*
+
+
+*GitHub link:* https://github.com/1415756/Reproducible_R
+
+*You will be marked on your repo organisation and readability.*
+
+### b) Share your repo with a partner, download, and try to run their data pipeline.
+
+*Partner's GitHub link:*
+
+*You **must** provide this so I can verify there is no plagiarism between you and your partner.*
+
+### c) Reflect on your experience running their code. (300-500 words)
+
+-   *What elements of your partner's code helped you to understand their data pipeline?*
+
+-   *Did it run? Did you need to fix anything?*
+
+-   *What suggestions would you make for improving their code to make it more understandable or reproducible, and why?*
+
+-   *If you needed to alter your partner's figure using their code, do you think that would be easy or difficult, and why?*
+
+### d) Reflect on your own code based on your experience with your partner's code and their review of yours. (300-500 words)
+
+-   *What improvements did they suggest, and do you agree?*
+
+-   *What did you learn about writing code for other people?*
+
+
+
